@@ -1,0 +1,28 @@
+@import "@fontsource/manrope/latin-400.css";
+@import "@fontsource/manrope/latin-500.css";
+@import "@fontsource/manrope/latin-600.css";
+@import "@fontsource/manrope/latin-700.css";
+@import "@fontsource/playfair-display/latin-700.css";
+@import "tailwindcss";
+
+@theme {
+    --font-sans: "Manrope", sans-serif;
+    --font-display: "Playfair Display", serif;
+
+    --color-brand-rose: #be7880;
+    --color-pine: #102c20;
+    --color-wine: #4d0012;
+    --color-brand-pink: #ffd8d9;
+}
+
+@layer base {
+    body {
+        @apply bg-white font-sans text-pine antialiased;
+    }
+
+    h1,
+    h2,
+    h3 {
+        @apply font-display;
+    }
+}

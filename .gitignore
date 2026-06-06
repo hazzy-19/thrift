@@ -1,0 +1,4 @@
+server-secrets/
+*firebase-privatekey*.json
+*service-account*.json
+.idea/

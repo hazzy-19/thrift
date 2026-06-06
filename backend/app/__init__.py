@@ -1,0 +1,1 @@
+"""Thrifter backend application."""
