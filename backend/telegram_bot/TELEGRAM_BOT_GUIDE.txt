@@ -1,0 +1,190 @@
+THRIFTER TELEGRAM ANNOUNCEMENT BOT
+=================================
+
+PURPOSE
+-------
+The Telegram bot lets approved administrators manage short announcements from
+Telegram. Active announcements are exposed through the FastAPI backend and
+shown in the website navbar as a rotating ticker.
+
+CURRENT FILE RESPONSIBILITIES
+-----------------------------
+backend/telegram_bot/config.py
+    Loads server-only environment variables and parses allowed Telegram IDs.
+
+backend/telegram_bot/models.py
+    Defines the Telegram update payloads and public announcement API response.
+
+backend/telegram_bot/database.py
+    Owns persistent SQLite announcement storage, validation, and queries.
+
+backend/telegram_bot/bot.py
+    Handles Telegram commands, normal messages, callbacks, polling, and API
+    requests to Telegram.
+
+backend/app/main.py
+    Starts FastAPI, starts polling or webhook mode, validates webhook requests,
+    and exposes GET /api/announcements.
+
+backend/telegram_bot/runners/
+    Contains optional manual utilities for polling, webhook setup, and chat-ID
+    discovery. Normal local development only needs the Uvicorn command.
+
+frontend/src/services/announcements.ts
+    Fetches active announcements from the backend.
+
+frontend/src/components/navbar/AnnouncementTicker.tsx
+    Displays the current announcement.
+
+frontend/src/components/navbar/navbar.tsx
+    Refreshes announcements every 30 seconds and rotates them every 5 seconds.
+
+HOW IT WORKS
+------------
+1. Telegram sends an update to the backend through polling or a webhook.
+2. /whoami is handled before authorization so an administrator can discover
+   the correct chat and user IDs.
+3. Every command that changes or reads managed announcements requires either
+   the sender user ID or chat ID to be in TELEGRAM_ALLOWED_CHAT_IDS.
+4. Valid announcements are stored in SQLite and remain after restarts.
+5. GET /api/announcements returns active announcements only, newest first.
+6. The frontend periodically fetches that endpoint and hides the ticker when
+   the response contains no announcements.
+
+BOT COMMANDS
+------------
+/start
+    Opens the administrator control panel with buttons for adding, viewing,
+    deleting, enabling, disabling, clearing, and getting help.
+
+/whoami
+    Shows the sender's chat ID and user ID. This does not modify data and works
+    before the allowlist is configured.
+
+/add <message>
+    Adds and immediately enables a new announcement.
+
+/list
+    Lists announcements with status and inline management buttons.
+
+/delete <id>
+    Permanently deletes one announcement.
+
+/enable <id>
+    Makes one announcement visible on the website.
+
+/disable <id>
+    Hides one announcement without deleting it.
+
+/clear
+    Requests confirmation before deleting every announcement.
+
+/help
+    Shows the available commands.
+
+Normal text sent by an allowed administrator is treated as a new announcement.
+After pressing Add announcement, the next normal text message is saved as the
+new announcement. Delete, Enable, and Disable buttons open focused selection
+lists so several records can be managed without typing their IDs.
+
+DATA AND VALIDATION
+-------------------
+Each record stores:
+    id, text, active, createdAt, updatedAt, and createdBy
+
+Protection applied before saving:
+    - Leading and trailing whitespace is removed.
+    - Empty announcements are rejected.
+    - Announcements longer than 160 characters are rejected.
+    - Duplicate text is rejected case-insensitively.
+    - SQLite provides persistent storage across application restarts.
+
+SECURITY MEASURES
+-----------------
+    - TELEGRAM_BOT_TOKEN stays in server-secrets/.env.local and is never sent
+      to the frontend.
+    - Random Telegram users are ignored and cannot list or change records.
+    - An empty TELEGRAM_ALLOWED_CHAT_IDS blocks all announcement management.
+    - /whoami is the only command intentionally available before authorization.
+    - Webhook mode requires TELEGRAM_WEBHOOK_SECRET.
+    - The webhook endpoint compares Telegram's secret header securely.
+    - Public website users only have access to the read-only announcements API.
+    - Telegram request errors do not print the bot token in application logs.
+
+REQUIRED ENVIRONMENT VARIABLES
+------------------------------
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_ALLOWED_CHAT_IDS=
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_WEBHOOK_URL=
+FRONTEND_ORIGINS=http://localhost:5173
+DATABASE_PATH=
+
+Use comma-separated IDs for multiple administrators:
+TELEGRAM_ALLOWED_CHAT_IDS=123456789,987654321
+
+Leave TELEGRAM_WEBHOOK_URL empty during local development. Set DATABASE_PATH
+only when the default backend/telegram_bot/data/announcements.db location is
+unsuitable.
+
+LOCAL DEVELOPMENT
+-----------------
+Run from the backend folder:
+
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+The FastAPI process automatically starts Telegram polling when
+TELEGRAM_WEBHOOK_URL is empty.
+
+Optional manual runner commands:
+
+.\.venv\Scripts\python.exe -m telegram_bot.runners.poll
+.\.venv\Scripts\python.exe -m telegram_bot.runners.get_chat_ids
+.\.venv\Scripts\python.exe -m telegram_bot.runners.set_webhook https://api.example.com
+
+INITIAL ADMIN SETUP
+-------------------
+1. Send /whoami to the bot.
+2. Copy the returned user ID or chat ID.
+3. Add it to TELEGRAM_ALLOWED_CHAT_IDS in server-secrets/.env.local.
+4. Restart Uvicorn because environment settings load at startup.
+5. Send /help or /add Test announcement to verify access.
+
+PRODUCTION WEBHOOK MODE
+-----------------------
+1. Deploy the backend to a public HTTPS URL.
+2. Set TELEGRAM_WEBHOOK_URL to that backend base URL.
+3. Set a long, random TELEGRAM_WEBHOOK_SECRET.
+4. Start one backend instance responsible for Telegram updates.
+5. Confirm logs say: Telegram bot running in webhook mode.
+
+CRITICAL OPERATIONAL RULES
+--------------------------
+    - Never commit server-secrets/.env.local or the Telegram token.
+    - Rotate the token with BotFather if it is exposed.
+    - Do not run two polling processes for the same bot token. Telegram will
+      reject one with a getUpdates conflict.
+    - Back up the SQLite database before destructive maintenance.
+    - /clear and /delete permanently remove records.
+    - Restart the backend after changing environment variables.
+    - Use polling locally and webhook mode for a stable production deployment.
+
+TROUBLESHOOTING
+---------------
+Bot does not answer /whoami:
+    Confirm TELEGRAM_BOT_TOKEN is valid and check backend logs.
+
+/whoami works but management commands do nothing:
+    TELEGRAM_ALLOWED_CHAT_IDS is empty or does not contain the returned ID.
+
+Polling conflict error:
+    Stop duplicate bot/backend processes or remove an existing webhook.
+
+Website ticker is empty:
+    Confirm at least one announcement is enabled, check GET
+    /api/announcements, and confirm the frontend API base URL is correct.
+
+Webhook requests fail:
+    Confirm the public URL uses HTTPS and the configured webhook secret matches.

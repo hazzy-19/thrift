@@ -11,7 +11,7 @@ import {
     Phone,
     UserRound,
 } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-context";
 import { AuthFlowError } from "../services/auth";
 
@@ -54,23 +54,33 @@ const LoginPage = () => {
         verifyPhoneCode,
     } = useAuth();
     const navigate = useNavigate();
+    const location = useLocation();
+    const returnTo =
+        typeof location.state === "object" &&
+        location.state !== null &&
+        "returnTo" in location.state &&
+        typeof location.state.returnTo === "string" &&
+        location.state.returnTo.startsWith("/") &&
+        location.state.returnTo !== "/login"
+            ? location.state.returnTo
+            : "/";
 
     useEffect(() => {
         if (!loading && user) {
-            navigate("/account", { replace: true });
+            navigate(returnTo, { replace: true });
         }
-    }, [loading, navigate, user]);
+    }, [loading, navigate, returnTo, user]);
 
     useEffect(() => {
         const closeOnEscape = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
-                navigate("/");
+                navigate(returnTo);
             }
         };
 
         document.addEventListener("keydown", closeOnEscape);
         return () => document.removeEventListener("keydown", closeOnEscape);
-    }, [navigate]);
+    }, [navigate, returnTo]);
 
     const showAuthError = (error: unknown) => {
         setMessage({
@@ -102,7 +112,7 @@ const LoginPage = () => {
             try {
                 if (phoneCodeSent) {
                     await verifyPhoneCode(verificationCode, mode === "signup" ? name : undefined);
-                    navigate("/", { replace: true });
+                    navigate(returnTo, { replace: true });
                 } else {
                     await sendPhoneCode(phone.trim(), "phone-recaptcha");
                     setPhoneCodeSent(true);
@@ -140,7 +150,7 @@ const LoginPage = () => {
                 await signInWithEmail(email.trim(), password);
             }
 
-            navigate("/", { replace: true });
+            navigate(returnTo, { replace: true });
         } catch (error) {
             showAuthError(error);
         } finally {
@@ -154,7 +164,7 @@ const LoginPage = () => {
 
         try {
             await signInWithGoogle();
-            navigate("/", { replace: true });
+            navigate(returnTo, { replace: true });
         } catch (error) {
             showAuthError(error);
         } finally {
@@ -172,7 +182,7 @@ const LoginPage = () => {
             aria-labelledby="auth-heading"
             onClick={(event) => {
                 if (event.target === event.currentTarget) {
-                    navigate("/");
+                    navigate(returnTo);
                 }
             }}
             className="fixed inset-0 z-[100] grid place-items-center overflow-y-auto bg-pine/60 px-4 py-6 backdrop-blur-sm sm:px-6 sm:py-8"
@@ -187,7 +197,7 @@ const LoginPage = () => {
 
                 <section className="flex flex-col justify-center p-6 sm:p-8 lg:p-10">
                     <Link
-                        to="/"
+                        to={returnTo}
                         className="mb-6 inline-flex w-fit items-center gap-2 rounded-md text-sm font-semibold text-pine hover:text-wine focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pine"
                     >
                         <ArrowLeft aria-hidden="true" className="h-4 w-4" />

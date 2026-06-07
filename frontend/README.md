@@ -50,9 +50,10 @@ depend on requests to Google's font servers.
 
 ## Telegram Announcements
 
-The FastAPI backend receives approved Telegram messages and exposes the current
-announcement through `/api/announcements/current`. The navbar refreshes that
-announcement every 30 seconds. The frontend never connects directly to Telegram.
+The FastAPI backend receives approved Telegram commands and exposes active
+announcements through `/api/announcements`. The navbar refreshes them every 30
+seconds and rotates messages every five seconds. The frontend never connects
+directly to Telegram.
 
 ## Authentication
 

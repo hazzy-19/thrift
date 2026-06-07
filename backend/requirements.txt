@@ -1,4 +1,9 @@
+alembic==1.16.5
 fastapi==0.115.12
 httpx==0.28.1
+psycopg[binary]==3.2.10
+pydantic==2.13.4
 python-dotenv==1.1.0
+redis==6.4.0
+SQLAlchemy==2.0.43
 uvicorn[standard]==0.34.3

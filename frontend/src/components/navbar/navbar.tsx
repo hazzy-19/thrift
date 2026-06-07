@@ -8,9 +8,10 @@ import {
     UserRound,
     X,
 } from "lucide-react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import logo from "../assets/logo.png";
-import { getCurrentAnnouncement, type Announcement } from "../../services/announcements";
+import { getAnnouncements, type Announcement } from "../../services/announcements";
+import AnnouncementTicker from "./AnnouncementTicker";
 
 type User = {
     name: string;
@@ -33,12 +34,14 @@ const focusClasses =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2";
 
 const Navbar = ({ cartCount, user }: NavbarProps) => {
+    const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
     const [atTop, setAtTop] = useState(true);
     const [secondaryHidden, setSecondaryHidden] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
-    const [announcement, setAnnouncement] = useState<Announcement | null>(null);
+    const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+    const [announcementIndex, setAnnouncementIndex] = useState(0);
     const searchInputRef = useRef<HTMLInputElement>(null);
     const lastScrollY = useRef(0);
 
@@ -74,24 +77,43 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
     useEffect(() => {
         const controller = new AbortController();
 
-        const loadAnnouncement = async () => {
+        const loadAnnouncements = async () => {
             try {
-                setAnnouncement(await getCurrentAnnouncement(controller.signal));
+                const nextAnnouncements = await getAnnouncements(controller.signal);
+                setAnnouncements(nextAnnouncements);
+                setAnnouncementIndex((current) =>
+                    nextAnnouncements.length ? current % nextAnnouncements.length : 0,
+                );
             } catch {
                 if (!controller.signal.aborted) {
-                    setAnnouncement(null);
+                    setAnnouncements([]);
+                    setAnnouncementIndex(0);
                 }
             }
         };
 
-        void loadAnnouncement();
-        const intervalId = window.setInterval(() => void loadAnnouncement(), 30_000);
+        void loadAnnouncements();
+        const intervalId = window.setInterval(() => void loadAnnouncements(), 30_000);
 
         return () => {
             controller.abort();
             window.clearInterval(intervalId);
         };
     }, []);
+
+    useEffect(() => {
+        if (announcements.length < 2) {
+            return;
+        }
+
+        const intervalId = window.setInterval(() => {
+            setAnnouncementIndex((current) => (current + 1) % announcements.length);
+        }, 5_000);
+
+        return () => window.clearInterval(intervalId);
+    }, [announcements.length]);
+
+    const currentAnnouncement = announcements[announcementIndex];
 
     useEffect(() => {
         const closeSearchOnEscape = (event: KeyboardEvent) => {
@@ -208,6 +230,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                     ) : (
                         <Link
                             to="/login"
+                            state={{ returnTo: location.pathname }}
                             className={`flex items-center gap-1.5 rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-wine ${focusClasses}`}
                         >
                             <UserRound aria-hidden="true" className="h-5 w-5" />
@@ -255,13 +278,13 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                             ))}
                         </ul>
                     </nav>
-                    <aside
-                        aria-label="Store announcements"
-                        aria-live="polite"
-                        className="min-h-5 min-w-0 flex-1 text-right text-sm font-semibold text-wine"
-                    >
-                        {announcement && <p className="truncate">{announcement.message}</p>}
-                    </aside>
+                    {currentAnnouncement && (
+                        <AnnouncementTicker
+                            announcement={currentAnnouncement}
+                            position={announcementIndex}
+                            total={announcements.length}
+                        />
+                    )}
                 </div>
             </div>
 
@@ -299,6 +322,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                     <div className="flex items-center justify-end gap-0.5">
                         <Link
                             to={user ? "/account" : "/login"}
+                            state={user ? undefined : { returnTo: location.pathname }}
                             onClick={closeMobilePanels}
                             aria-label={user ? `${user.name}'s account` : "Sign in or create account"}
                             className={`rounded-full p-2 text-rose-800 hover:bg-rose-100 ${focusClasses}`}
@@ -334,6 +358,15 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                     {searchForm(true)}
                 </div>
 
+                {currentAnnouncement && (
+                    <AnnouncementTicker
+                        announcement={currentAnnouncement}
+                        position={announcementIndex}
+                        total={announcements.length}
+                        compact
+                    />
+                )}
+
                 <nav
                     aria-label="Mobile product categories"
                     className={`overflow-hidden border-t border-rose-100 transition-[max-height,opacity] duration-300 ${
@@ -344,6 +377,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                         <li>
                             <Link
                                 to={user ? "/account" : "/login"}
+                                state={user ? undefined : { returnTo: location.pathname }}
                                 onClick={closeMobilePanels}
                                 className={`mb-1 flex items-center gap-2 rounded-md bg-pine px-3 py-2.5 text-sm font-semibold text-white ${focusClasses}`}
                             >

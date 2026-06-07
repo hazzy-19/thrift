@@ -26,3 +26,29 @@
         @apply font-display;
     }
 }
+
+@keyframes announcement-enter {
+    0% {
+        opacity: 0;
+        transform: translateY(0.35rem);
+    }
+    8%,
+    90% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(-0.35rem);
+    }
+}
+
+.announcement-ticker-rotating {
+    animation: announcement-enter 5s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .announcement-ticker-rotating {
+        animation: none;
+    }
+}

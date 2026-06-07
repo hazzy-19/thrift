@@ -1,13 +1,9 @@
 import argparse
 import asyncio
-import sys
-from pathlib import Path
 
 import httpx
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from app.config import get_settings  # noqa: E402
+from telegram_bot.config import get_settings
 
 
 async def set_webhook(base_url: str) -> None:
@@ -24,8 +20,8 @@ async def set_webhook(base_url: str) -> None:
             json={
                 "url": webhook_url,
                 "secret_token": settings.telegram_webhook_secret,
-                "allowed_updates": ["message"],
-                "drop_pending_updates": True,
+                "allowed_updates": ["message", "callback_query"],
+                "drop_pending_updates": False,
             },
         )
         response.raise_for_status()

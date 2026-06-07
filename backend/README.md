@@ -1,8 +1,35 @@
 # Thrifter Backend
 
-FastAPI service for storefront APIs and Telegram-powered announcements.
+FastAPI API and Telegram announcement manager.
 
-## Setup
+All Telegram announcement code, models, storage, utilities, and detailed
+documentation live in `telegram_bot/`. The general FastAPI entrypoint remains
+in `app/main.py`.
+
+## Environment
+
+Configure `../server-secrets/.env.local`:
+
+```env
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_ALLOWED_CHAT_IDS=
+TELEGRAM_WEBHOOK_SECRET=
+TELEGRAM_WEBHOOK_URL=
+FRONTEND_ORIGINS=http://localhost:5173
+DATABASE_PATH=
+DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/thrifter
+REDIS_URL=redis://localhost:6379/0
+```
+
+- `TELEGRAM_ALLOWED_CHAT_IDS` is required for announcement changes. With an
+  empty list, all changes are blocked and only `/whoami` works.
+- Leave `TELEGRAM_WEBHOOK_URL` empty locally. FastAPI automatically starts
+  polling.
+- Set `TELEGRAM_WEBHOOK_URL` to the public HTTPS backend URL in production.
+  FastAPI automatically registers and uses the webhook.
+- `TELEGRAM_WEBHOOK_SECRET` is required in webhook mode.
+
+## Run Locally
 
 ```powershell
 python -m venv .venv
@@ -10,35 +37,67 @@ python -m venv .venv
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
 ```
 
-The API runs at `http://localhost:8000`.
+The single Uvicorn command runs both the API and Telegram polling locally.
 
-## Telegram Setup
+For WebStorm, select this project interpreter:
 
-1. Revoke any token that has been shared.
-2. Add the replacement values to `../server-secrets/.env.local`.
-3. Send the bot a message, then find your chat ID:
-
-```powershell
-.\.venv\Scripts\python.exe scripts\get_chat_ids.py
+```text
+backend\.venv\Scripts\python.exe
 ```
 
-4. Optionally add approved IDs to `TELEGRAM_ALLOWED_CHAT_IDS`. Leave it empty
-   during local development to accept messages from any chat.
-5. For production, generate a long random `TELEGRAM_WEBHOOK_SECRET`.
-6. Deploy the backend to a public HTTPS URL.
-7. Register the webhook:
+Send `/whoami` to the bot, then copy the returned chat or user ID into:
 
-```powershell
-.\.venv\Scripts\python.exe scripts\set_webhook.py https://api.example.com
+```env
+TELEGRAM_ALLOWED_CHAT_IDS=123456789
 ```
 
-Plain text messages from approved chats become the current announcement.
-Send `/clear` to remove it. Messages longer than 240 characters are rejected.
+Restart Uvicorn after changing environment values.
 
-For local development, run polling instead of registering a webhook:
+## Bot Commands
 
-```powershell
-.\.venv\Scripts\python.exe scripts\poll_bot.py
+```text
+/add <message>
+/list
+/delete <id>
+/enable <id>
+/disable <id>
+/clear
+/help
+/whoami
 ```
 
-Do not run polling while a webhook is active.
+Normal text from an allowed admin creates an announcement. `/list` includes
+inline buttons for enabling, disabling, previewing, and deleting records.
+
+## API
+
+```text
+GET /health
+GET /api/announcements
+POST /api/telegram/webhook
+```
+
+`GET /api/announcements` returns active announcements newest first.
+
+Detailed bot documentation is in `telegram_bot/TELEGRAM_BOT_GUIDE.txt`.
+
+## PostgreSQL, Redis, and Alembic
+
+- PostgreSQL stores authenticated customer carts.
+- Redis temporarily stores guest carts before authentication.
+- `app/services/cart_merge.py` transactionally merges a Redis guest cart into
+  the authenticated user's PostgreSQL cart, then clears the guest cache.
+- The merge service must only be called after a backend-verified Firebase ID
+  token identifies the customer. No public merge endpoint is exposed yet.
+
+After setting `DATABASE_URL`, apply migrations from the backend folder:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic upgrade head
+```
+
+Create future migrations after changing SQLAlchemy models:
+
+```powershell
+.\.venv\Scripts\python.exe -m alembic revision --autogenerate -m "describe change"
+```

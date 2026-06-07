@@ -23,12 +23,9 @@ Vite proxies frontend `/api` requests to `http://localhost:8000`.
 Server secrets belong in `server-secrets/.env.local`. Revoke any bot token that
 has been shared before configuring the backend.
 
-For local bot development:
+FastAPI automatically runs the bot in polling mode locally when
+`TELEGRAM_WEBHOOK_URL` is empty. Send `/whoami` to discover your ID, add it to
+`TELEGRAM_ALLOWED_CHAT_IDS`, then restart FastAPI.
 
-```powershell
-cd backend
-.\.venv\Scripts\python.exe scripts\poll_bot.py
-```
-
-Approved plain-text Telegram messages become the navbar announcement. Send
-`/clear` to remove the current announcement.
+Approved admins can add, list, enable, disable, preview, and delete persistent
+announcements. The navbar rotates active announcements every five seconds.

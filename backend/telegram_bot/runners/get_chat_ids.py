@@ -1,12 +1,8 @@
 import asyncio
-import sys
-from pathlib import Path
 
 import httpx
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
-from app.config import get_settings  # noqa: E402
+from telegram_bot.config import get_settings
 
 
 async def get_chat_ids() -> None:
