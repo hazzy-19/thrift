@@ -3,10 +3,18 @@ import logging
 from contextlib import asynccontextmanager
 from secrets import compare_digest
 
-from fastapi import FastAPI, Header, HTTPException, status
+from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from redis.exceptions import RedisError
+from sqlalchemy.orm import Session
 
+from app.auth import get_authenticated_user_id
+from app.cache.redis_store import RedisTransientStore
 from app.config import get_app_settings
+from app.dependencies import get_database
+from app.schemas.cart import CartResponse, MergeCartRequest
+from app.services.cart_merge import merge_local_cart
 from telegram_bot.bot import TelegramBot
 from telegram_bot.config import get_settings
 from telegram_bot.database import initialize_database, list_announcements
@@ -56,8 +64,28 @@ app.add_middleware(
     allow_origins=list(app_settings.frontend_origins),
     allow_credentials=True,
     allow_methods=["GET", "POST"],
-    allow_headers=["Content-Type", "X-Telegram-Bot-Api-Secret-Token"],
+    allow_headers=["Authorization", "Content-Type", "X-Telegram-Bot-Api-Secret-Token"],
 )
+
+
+@app.middleware("http")
+async def redis_rate_limit(request: Request, call_next):
+    if app_settings.redis_url:
+        client_ip = request.client.host if request.client else "unknown"
+        try:
+            allowed = RedisTransientStore().allow_request(
+                client_ip,
+                app_settings.rate_limit_requests,
+                app_settings.rate_limit_window_seconds,
+            )
+            if not allowed:
+                return JSONResponse(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    content={"detail": "Too many requests"},
+                )
+        except RedisError:
+            logger.exception("Redis rate limiter unavailable; allowing request")
+    return await call_next(request)
 
 
 @app.get("/health")
@@ -74,6 +102,29 @@ def announcements() -> dict[str, list[dict[str, object]]]:
             for item in active
         ]
     }
+
+
+@app.post("/api/cart/merge", response_model=CartResponse)
+def merge_cart(
+    payload: MergeCartRequest,
+    authenticated_user_id: str = Depends(get_authenticated_user_id),
+    database: Session = Depends(get_database),
+) -> CartResponse:
+    cart = merge_local_cart(
+        authenticated_user_id=authenticated_user_id,
+        local_items=payload.items,
+        database=database,
+    )
+    return CartResponse(
+        items=[
+            {
+                "product_id": item.product_id,
+                "variant_id": item.variant_id,
+                "quantity": item.quantity,
+            }
+            for item in cart.items
+        ]
+    )
 
 
 @app.post("/api/telegram/webhook", status_code=status.HTTP_204_NO_CONTENT)

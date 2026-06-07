@@ -20,6 +20,8 @@ type User = {
 
 type NavbarProps = {
     cartCount: number;
+    onSearchChange: (query: string) => void;
+    searchQuery: string;
     user: User | null;
 };
 
@@ -33,7 +35,7 @@ const navItems = [
 const focusClasses =
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 focus-visible:ring-offset-2";
 
-const Navbar = ({ cartCount, user }: NavbarProps) => {
+const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) => {
     const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
     const [atTop, setAtTop] = useState(true);
@@ -146,13 +148,15 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
             </label>
             <Search
                 aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-rose-500"
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-rose-900"
             />
             <input
                 ref={mobile ? searchInputRef : undefined}
                 id={mobile ? "mobile-search" : "desktop-search"}
                 type="search"
                 placeholder="Search products..."
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
                 className={`w-full rounded-full border border-rose-200 bg-white py-2 pl-10 text-sm text-rose-950 placeholder:text-rose-400 transition-colors hover:border-rose-300 focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-200 ${
                     mobile ? "pr-10" : "pr-4"
                 }`}
@@ -162,9 +166,9 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                     type="button"
                     aria-label="Close search"
                     onClick={() => setShowSearch(false)}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-rose-600 hover:bg-rose-100 ${focusClasses}`}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full p-1 text-rose-900 hover:bg-rose-100 ${focusClasses}`}
                 >
-                    <X aria-hidden="true" className="h-4 w-4" />
+                    <X aria-hidden="true" className="h-4 w-4 text-rose-900" />
                 </button>
             )}
         </form>
@@ -175,9 +179,9 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
             to="/cart"
             onClick={closeMobilePanels}
             aria-label={`Shopping cart with ${Math.max(0, cartCount)} ${cartCount === 1 ? "item" : "items"}`}
-            className={`relative rounded-full p-2 text-rose-800 transition-colors hover:bg-rose-100 hover:text-rose-950 ${focusClasses}`}
+            className={`relative rounded-full p-2 text-rose-900 transition-colors hover:bg-rose-100 ${focusClasses}`}
         >
-            <ShoppingBag aria-hidden="true" className="h-5 w-5 md:h-6 md:w-6" />
+            <ShoppingBag aria-hidden="true" className="h-5 w-5 text-rose-900 md:h-6 md:w-6" />
             {cartCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-rose-800 px-1 text-[10px] font-bold leading-none text-white ring-2 ring-rose-50">
                     {displayedCartCount}
@@ -222,7 +226,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                             ) : (
                                 <UserRound
                                     aria-hidden="true"
-                                    className="h-7 w-7 rounded-full bg-brand-pink p-1 text-pine"
+                                    className="h-7 w-7 rounded-full bg-brand-pink p-1 text-rose-900"
                                 />
                             )}
                             <span className="hidden max-w-24 truncate lg:block">{user.name}</span>
@@ -233,16 +237,16 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                             state={{ returnTo: location.pathname }}
                             className={`flex items-center gap-1.5 rounded-full bg-pine px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-wine ${focusClasses}`}
                         >
-                            <UserRound aria-hidden="true" className="h-5 w-5" />
+                            <UserRound aria-hidden="true" className="h-5 w-5 text-rose-900" />
                             <span>Sign in</span>
                         </Link>
                     )}
                     <Link
                         to="/wishlist"
                         aria-label="Wishlist"
-                        className={`rounded-full p-2 text-rose-800 transition-colors hover:bg-rose-100 hover:text-rose-950 ${focusClasses}`}
+                        className={`rounded-full p-2 text-rose-900 transition-colors hover:bg-rose-100 ${focusClasses}`}
                     >
-                        <Heart aria-hidden="true" className="h-5 w-5 md:h-6 md:w-6" />
+                        <Heart aria-hidden="true" className="h-5 w-5 text-rose-900 md:h-6 md:w-6" />
                     </Link>
                     {cartLink}
                 </div>
@@ -272,7 +276,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                                         }
                                     >
                                         {label}
-                                        <ChevronDown aria-hidden="true" className="h-3.5 w-3.5" />
+                                        <ChevronDown aria-hidden="true" className="h-3.5 w-3.5 text-rose-900" />
                                     </NavLink>
                                 </li>
                             ))}
@@ -281,7 +285,6 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                     {currentAnnouncement && (
                         <AnnouncementTicker
                             announcement={currentAnnouncement}
-                            position={announcementIndex}
                             total={announcements.length}
                         />
                     )}
@@ -298,12 +301,12 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                             setMenuOpen((open) => !open);
                             setShowSearch(false);
                         }}
-                        className={`w-fit rounded-full p-2 text-rose-800 hover:bg-rose-100 ${focusClasses}`}
+                        className={`w-fit rounded-full p-2 text-rose-900 hover:bg-rose-100 ${focusClasses}`}
                     >
                         {menuOpen ? (
-                            <X aria-hidden="true" className="h-6 w-6" />
+                            <X aria-hidden="true" className="h-6 w-6 text-rose-900" />
                         ) : (
-                            <Menu aria-hidden="true" className="h-6 w-6" />
+                            <Menu aria-hidden="true" className="h-6 w-6 text-rose-900" />
                         )}
                     </button>
 
@@ -325,12 +328,12 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                             state={user ? undefined : { returnTo: location.pathname }}
                             onClick={closeMobilePanels}
                             aria-label={user ? `${user.name}'s account` : "Sign in or create account"}
-                            className={`rounded-full p-2 text-rose-800 hover:bg-rose-100 ${focusClasses}`}
+                            className={`rounded-full p-2 text-rose-900 hover:bg-rose-100 ${focusClasses}`}
                         >
                             {user?.avatar ? (
                                 <img src={user.avatar} alt="" className="h-5 w-5 rounded-full object-cover" />
                             ) : (
-                                <UserRound aria-hidden="true" className="h-5 w-5" />
+                                <UserRound aria-hidden="true" className="h-5 w-5 text-rose-900" />
                             )}
                         </Link>
                         <button
@@ -342,9 +345,9 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                                 setShowSearch((open) => !open);
                                 setMenuOpen(false);
                             }}
-                            className={`rounded-full p-2 text-rose-800 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 ${focusClasses}`}
+                            className={`rounded-full p-2 text-rose-900 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 ${focusClasses}`}
                         >
-                            <Search aria-hidden="true" className="h-5 w-5" />
+                            <Search aria-hidden="true" className="h-5 w-5 text-rose-900" />
                         </button>
                         {cartLink}
                     </div>
@@ -361,7 +364,6 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                 {currentAnnouncement && (
                     <AnnouncementTicker
                         announcement={currentAnnouncement}
-                        position={announcementIndex}
                         total={announcements.length}
                         compact
                     />
@@ -381,7 +383,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                                 onClick={closeMobilePanels}
                                 className={`mb-1 flex items-center gap-2 rounded-md bg-pine px-3 py-2.5 text-sm font-semibold text-white ${focusClasses}`}
                             >
-                                <UserRound aria-hidden="true" className="h-4 w-4" />
+                                <UserRound aria-hidden="true" className="h-4 w-4 text-rose-900" />
                                 {user ? "My account" : "Sign in or create account"}
                             </Link>
                         </li>
@@ -400,7 +402,7 @@ const Navbar = ({ cartCount, user }: NavbarProps) => {
                                     }
                                 >
                                     {label}
-                                    <ChevronDown aria-hidden="true" className="h-4 w-4" />
+                                    <ChevronDown aria-hidden="true" className="h-4 w-4 text-rose-900" />
                                 </NavLink>
                             </li>
                         ))}

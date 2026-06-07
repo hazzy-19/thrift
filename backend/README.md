@@ -19,6 +19,10 @@ FRONTEND_ORIGINS=http://localhost:5173
 DATABASE_PATH=
 DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/thrifter
 REDIS_URL=redis://localhost:6379/0
+RATE_LIMIT_REQUESTS=120
+RATE_LIMIT_WINDOW_SECONDS=60
+FIREBASE_PROJECT_ID=
+FIREBASE_SERVICE_ACCOUNT_PATH=server-secrets/firebase-service-account.json
 ```
 
 - `TELEGRAM_ALLOWED_CHAT_IDS` is required for announcement changes. With an
@@ -81,14 +85,14 @@ POST /api/telegram/webhook
 
 Detailed bot documentation is in `telegram_bot/TELEGRAM_BOT_GUIDE.txt`.
 
-## PostgreSQL, Redis, and Alembic
+## Carts, Redis, and Alembic
 
 - PostgreSQL stores authenticated customer carts.
-- Redis temporarily stores guest carts before authentication.
-- `app/services/cart_merge.py` transactionally merges a Redis guest cart into
-  the authenticated user's PostgreSQL cart, then clears the guest cache.
-- The merge service must only be called after a backend-verified Firebase ID
-  token identifies the customer. No public merge endpoint is exposed yet.
+- Browser local storage holds the guest cart before authentication.
+- `POST /api/cart/merge` verifies the Firebase ID token, transactionally merges
+  the submitted local cart into PostgreSQL, and returns the database cart.
+- Redis is limited to rate limiting, temporary OTPs, sessions, short-lived
+  cache entries, and queued jobs. It does not store carts.
 
 After setting `DATABASE_URL`, apply migrations from the backend folder:
 
