@@ -38,37 +38,38 @@ const focusClasses =
 const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) => {
     const location = useLocation();
     const [scrolled, setScrolled] = useState(false);
-    const [atTop, setAtTop] = useState(true);
-    const [secondaryHidden, setSecondaryHidden] = useState(false);
+    const [overHero, setOverHero] = useState(location.pathname === "/");
     const [menuOpen, setMenuOpen] = useState(false);
     const [showSearch, setShowSearch] = useState(false);
     const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-    const [announcementIndex, setAnnouncementIndex] = useState(0);
+    const headerRef = useRef<HTMLElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    const lastScrollY = useRef(0);
-
     const displayedCartCount = cartCount > 99 ? "99+" : cartCount;
 
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
             const isScrolled = currentScrollY > 10;
+            const hero = location.pathname === "/" ? document.getElementById("home-hero") : null;
 
             setScrolled(isScrolled);
-            setAtTop(currentScrollY === 0);
-            setSecondaryHidden(isScrolled && currentScrollY > lastScrollY.current);
+            setOverHero(
+                Boolean(hero && hero.getBoundingClientRect().bottom > (headerRef.current?.offsetHeight ?? 0)),
+            );
 
             if (currentScrollY > 0) {
-                setShowSearch(false);
                 setMenuOpen(false);
             }
-
-            lastScrollY.current = currentScrollY;
         };
 
+        handleScroll();
         window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+        window.addEventListener("resize", handleScroll);
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("resize", handleScroll);
+        };
+    }, [location.pathname]);
 
     useEffect(() => {
         if (showSearch) {
@@ -83,13 +84,9 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
             try {
                 const nextAnnouncements = await getAnnouncements(controller.signal);
                 setAnnouncements(nextAnnouncements);
-                setAnnouncementIndex((current) =>
-                    nextAnnouncements.length ? current % nextAnnouncements.length : 0,
-                );
             } catch {
                 if (!controller.signal.aborted) {
                     setAnnouncements([]);
-                    setAnnouncementIndex(0);
                 }
             }
         };
@@ -103,19 +100,7 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
         };
     }, []);
 
-    useEffect(() => {
-        if (announcements.length < 2) {
-            return;
-        }
-
-        const intervalId = window.setInterval(() => {
-            setAnnouncementIndex((current) => (current + 1) % announcements.length);
-        }, 5_000);
-
-        return () => window.clearInterval(intervalId);
-    }, [announcements.length]);
-
-    const currentAnnouncement = announcements[announcementIndex];
+    const currentAnnouncement = announcements[0];
 
     useEffect(() => {
         const closeSearchOnEscape = (event: KeyboardEvent) => {
@@ -192,11 +177,15 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
 
     return (
         <header
-            className={`sticky top-0 z-50 border-b border-rose-100 bg-rose-50/95 backdrop-blur transition-shadow ${
-                scrolled ? "shadow-md" : "shadow-sm"
+            ref={headerRef}
+            className={`header-on-pine sticky top-0 z-50 border-b transition-[background-color,border-color,box-shadow] duration-300 ${
+                overHero
+                    ? "header-over-hero border-transparent shadow-none"
+                    : `border-white/10 bg-pine/95 backdrop-blur ${scrolled ? "shadow-md" : "shadow-sm"}`
             }`}
         >
-            <div className="mx-auto hidden max-w-7xl items-center gap-6 px-6 py-3 md:flex lg:px-8">
+            <div className={overHero ? "bg-transparent" : "bg-pine/95 backdrop-blur"}>
+                <div className="mx-auto hidden max-w-7xl items-center gap-6 px-6 py-3 md:flex lg:px-8">
                 <Link
                     to="/"
                     aria-label="Thrifter home"
@@ -250,17 +239,16 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                     </Link>
                     {cartLink}
                 </div>
+                </div>
             </div>
 
             <div
-                className={`hidden overflow-hidden border-t border-rose-100 transition-[max-height,opacity,transform] duration-300 ease-out md:block ${
-                    secondaryHidden
-                        ? "max-h-0 -translate-y-2 opacity-0"
-                        : "max-h-14 translate-y-0 opacity-100"
+                className={`hidden border-t border-white/10 transition-colors duration-300 md:block ${
+                    overHero ? "border-transparent bg-transparent" : "bg-pine/95 backdrop-blur"
                 }`}
             >
-                <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 lg:px-8">
-                    <nav aria-label="Product categories">
+                <div className="mx-auto flex max-w-7xl items-center gap-6 px-6 lg:px-8">
+                    <nav aria-label="Product categories" className="w-1/2">
                         <ul className="flex items-center gap-5 lg:gap-8">
                             {navItems.map(({ label, to }) => (
                                 <li key={to}>
@@ -270,8 +258,8 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                                         className={({ isActive }) =>
                                             `flex items-center gap-1 border-b-2 py-3 text-sm transition-colors ${focusClasses} ${
                                                 isActive
-                                                    ? "border-rose-700 font-semibold text-rose-950"
-                                                    : "border-transparent font-medium text-rose-700 hover:border-rose-300 hover:text-rose-950"
+                                                    ? "border-rose-700 font-semibold text-white"
+                                                    : "border-transparent font-medium text-rose-100 hover:border-rose-300 hover:text-white"
                                             }`
                                         }
                                     >
@@ -283,16 +271,22 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                         </ul>
                     </nav>
                     {currentAnnouncement && (
-                        <AnnouncementTicker
-                            announcement={currentAnnouncement}
-                            total={announcements.length}
-                        />
+                        <div className="w-1/2 min-w-0">
+                            <AnnouncementTicker
+                                announcement={currentAnnouncement}
+                                announcements={announcements}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
 
-            <div className="md:hidden">
-                <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2">
+            <div className="relative md:hidden">
+                <div
+                    className={`grid grid-cols-[1fr_auto_1fr] items-center px-3 py-2 ${
+                        overHero ? "bg-transparent" : "bg-pine/95 backdrop-blur"
+                    }`}
+                >
                     <button
                         type="button"
                         aria-label={menuOpen ? "Close navigation menu" : "Open navigation menu"}
@@ -340,12 +334,11 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                             type="button"
                             aria-label={showSearch ? "Close search" : "Open search"}
                             aria-expanded={showSearch}
-                            disabled={!atTop}
                             onClick={() => {
                                 setShowSearch((open) => !open);
                                 setMenuOpen(false);
                             }}
-                            className={`rounded-full p-2 text-rose-900 hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 ${focusClasses}`}
+                            className={`rounded-full p-2 text-rose-900 hover:bg-rose-100 ${focusClasses}`}
                         >
                             <Search aria-hidden="true" className="h-5 w-5 text-rose-900" />
                         </button>
@@ -355,24 +348,34 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
 
                 <div
                     className={`overflow-hidden px-3 transition-[max-height,opacity,padding] duration-300 ${
-                        showSearch && atTop ? "max-h-20 pb-3 opacity-100" : "max-h-0 pb-0 opacity-0"
+                        overHero ? "bg-transparent" : "bg-pine/95 backdrop-blur"
+                    } ${
+                        showSearch ? "max-h-20 pb-3 opacity-100" : "max-h-0 pb-0 opacity-0"
                     }`}
                 >
                     {searchForm(true)}
                 </div>
 
                 {currentAnnouncement && (
-                    <AnnouncementTicker
-                        announcement={currentAnnouncement}
-                        total={announcements.length}
-                        compact
-                    />
+                    <div
+                        className={`transition-colors duration-300 ${
+                            overHero ? "bg-transparent" : "bg-pine/95 backdrop-blur"
+                        }`}
+                    >
+                        <AnnouncementTicker
+                            announcement={currentAnnouncement}
+                            announcements={announcements}
+                            compact
+                        />
+                    </div>
                 )}
 
                 <nav
                     aria-label="Mobile product categories"
-                    className={`overflow-hidden border-t border-rose-100 transition-[max-height,opacity] duration-300 ${
-                        menuOpen && !scrolled ? "max-h-80 opacity-100" : "max-h-0 opacity-0"
+                    className={`absolute left-3 right-3 top-full z-20 overflow-hidden rounded-xl border border-white/10 bg-pine/95 shadow-xl backdrop-blur transition-[max-height,opacity,transform] duration-300 ${
+                        menuOpen && !scrolled
+                            ? "max-h-80 translate-y-2 opacity-100"
+                            : "pointer-events-none max-h-0 -translate-y-1 opacity-0"
                     }`}
                 >
                     <ul className="px-3 py-2">
@@ -394,10 +397,10 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                                     end={to === "/"}
                                     onClick={closeMobilePanels}
                                     className={({ isActive }) =>
-                                        `flex items-center justify-between rounded-md border-l-2 px-3 py-2.5 text-sm ${focusClasses} ${
+                                        `flex items-center justify-between rounded-lg px-3 py-2.5 text-sm transition-colors ${focusClasses} ${
                                             isActive
-                                                ? "border-rose-700 bg-rose-100 font-semibold text-rose-950"
-                                                : "border-transparent font-medium text-rose-700 hover:bg-rose-100 hover:text-rose-950"
+                                                ? "bg-rose-800 font-semibold text-white"
+                                                : "font-medium text-white hover:bg-white/10"
                                         }`
                                     }
                                 >

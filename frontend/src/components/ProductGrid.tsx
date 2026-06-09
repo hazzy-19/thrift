@@ -12,19 +12,40 @@ type Product = {
 type ProductGridProps = {
     category?: string;
     query: string;
+    promotionFilter?: PromotionFilter;
 };
+
+export type PromotionFilter = "all" | "women" | "men" | "kid" | "clearance";
 
 const products = allProducts as Product[];
 
-const ProductGrid = ({ category, query }: ProductGridProps) => {
+const ProductGrid = ({ category, query, promotionFilter = "all" }: ProductGridProps) => {
     const normalizedQuery = query.trim().toLowerCase();
-    const visibleProducts = products.filter(
-        (product) =>
-            (!category || product.category === category) &&
-            (!normalizedQuery ||
-                product.name.toLowerCase().includes(normalizedQuery) ||
-                product.category.toLowerCase().includes(normalizedQuery)),
-    );
+    const visibleProducts = products
+        .filter(
+            (product) =>
+                (!category || product.category === category) &&
+                (!normalizedQuery ||
+                    product.name.toLowerCase().includes(normalizedQuery) ||
+                    product.category.toLowerCase().includes(normalizedQuery)),
+        )
+        .map((product, originalIndex) => ({ product, originalIndex }))
+        .sort((a, b) => {
+            if (promotionFilter === "clearance") {
+                const discountA = (a.product.old_price - a.product.new_price) / a.product.old_price;
+                const discountB = (b.product.old_price - b.product.new_price) / b.product.old_price;
+                return discountB - discountA || a.originalIndex - b.originalIndex;
+            }
+
+            if (promotionFilter !== "all") {
+                const aMatches = a.product.category === promotionFilter ? 1 : 0;
+                const bMatches = b.product.category === promotionFilter ? 1 : 0;
+                return bMatches - aMatches || a.originalIndex - b.originalIndex;
+            }
+
+            return a.originalIndex - b.originalIndex;
+        })
+        .map(({ product }) => product);
 
     if (visibleProducts.length === 0) {
         return (
