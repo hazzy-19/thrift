@@ -347,7 +347,7 @@ const LoginPage = () => {
                     <div id="phone-recaptcha" />
 
                     <p className="mt-6 text-center text-sm text-pine/65">
-                        {mode === "signin" && <>New to Thrifter? <button type="button" onClick={() => changeMode("signup")} className="font-bold text-wine underline underline-offset-4">Create an account</button></>}
+                        {mode === "signin" && <>New to Jersey World? <button type="button" onClick={() => changeMode("signup")} className="font-bold text-wine underline underline-offset-4">Create an account</button></>}
                         {mode === "signup" && <>Already have an account? <button type="button" onClick={() => changeMode("signin")} className="font-bold text-wine underline underline-offset-4">Sign in</button></>}
                         {mode === "reset" && <button type="button" onClick={() => changeMode("signin")} className="font-bold text-wine underline underline-offset-4">Return to sign in</button>}
                     </p>

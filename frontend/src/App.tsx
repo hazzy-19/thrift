@@ -5,6 +5,7 @@ import AccountPage from './pages/AccountPage.tsx'
 import CartPage from './pages/CartPage.tsx'
 import CategoryPage from './pages/CategoryPage.tsx'
 import HomePage from './pages/HomePage.tsx'
+import ItemPage from './pages/ItemPage.tsx'
 import LoginPage from './pages/LoginPage.tsx'
 import WishlistPage from './pages/WishlistPage.tsx'
 import { useAuth } from './context/auth-context.ts'
@@ -34,9 +35,10 @@ function AppContent() {
         <Route path="/account" element={<AccountPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/wishlist" element={<WishlistPage />} />
+        <Route path="/items/:id" element={<ItemPage />} />
         <Route path="/men" element={<CategoryPage category="men" searchQuery={searchQuery} title="Men" />} />
         <Route path="/women" element={<CategoryPage category="women" searchQuery={searchQuery} title="Women" />} />
-        <Route path="/kids" element={<CategoryPage category="kid" searchQuery={searchQuery} title="Kids" />} />
+        <Route path="/kids" element={<CategoryPage category="kids" searchQuery={searchQuery} title="Kids" />} />
       </Routes>
     </>
   )

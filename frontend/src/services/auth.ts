@@ -46,7 +46,7 @@ export class AuthFlowError extends Error {
 
 const mapFirebaseUser = (user: User): AuthUser => ({
     id: user.uid,
-    name: user.displayName ?? "Thrifter shopper",
+    name: user.displayName ?? "Jersey World shopper",
     email: user.email ?? "",
     avatar: user.photoURL ?? "",
 });

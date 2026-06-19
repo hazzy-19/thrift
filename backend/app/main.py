@@ -7,12 +7,15 @@ from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from redis.exceptions import RedisError
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.auth import get_authenticated_user_id
 from app.cache.redis_store import RedisTransientStore
 from app.config import get_app_settings
-from app.dependencies import get_database
+from app.database.models import Item
+from app.dependencies import get_database, validate_configured_database_schema
+from app.schemas.item import ItemDetail, ItemSummary
 from app.schemas.cart import CartResponse, MergeCartRequest
 from app.services.cart_merge import merge_local_cart
 from telegram_bot.bot import TelegramBot
@@ -32,6 +35,7 @@ telegram_bot: TelegramBot | None = None
 async def lifespan(_: FastAPI):
     global telegram_bot
     initialize_database()
+    validate_configured_database_schema()
     polling_task: asyncio.Task[None] | None = None
 
     if settings.telegram_bot_token:
@@ -58,7 +62,7 @@ async def lifespan(_: FastAPI):
         await telegram_bot.close()
 
 
-app = FastAPI(title="Thrifter API", version="0.2.0", lifespan=lifespan)
+app = FastAPI(title="Jersey World API", version="0.3.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=list(app_settings.frontend_origins),
@@ -102,6 +106,74 @@ def announcements() -> dict[str, list[dict[str, object]]]:
             for item in active
         ]
     }
+
+
+@app.get("/api/items", response_model=list[ItemSummary])
+def list_items(
+    category: str | None = None,
+    query: str | None = None,
+    database: Session = Depends(get_database),
+) -> list[Item]:
+    statement = select(Item).order_by(Item.created_at.desc(), Item.name.asc())
+    normalized_query = query.strip() if query else ""
+
+    if category:
+        statement = statement.where(Item.category == category)
+
+    if normalized_query:
+        pattern = f"%{normalized_query}%"
+        statement = statement.where(
+            or_(
+                Item.name.ilike(pattern),
+                Item.brand.ilike(pattern),
+                Item.category.ilike(pattern),
+                Item.team.ilike(pattern),
+                Item.league.ilike(pattern),
+                Item.sport.ilike(pattern),
+            )
+        )
+
+    return list(database.scalars(statement).all())
+
+
+@app.get("/api/items/{item_id}", response_model=ItemDetail)
+def get_item(item_id: str, database: Session = Depends(get_database)) -> ItemDetail:
+    item = database.get(Item, item_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    suggestions = list(
+        database.scalars(
+            select(Item)
+            .where(Item.category == item.category, Item.id != item.id)
+            .order_by(Item.created_at.desc(), Item.name.asc())
+            .limit(4)
+        ).all()
+    )
+    return ItemDetail.model_validate(
+        {
+            "id": item.id,
+            "name": item.name,
+            "brand": item.brand,
+            "category": item.category,
+            "price": item.price,
+            "original_price": item.original_price,
+            "images": item.images,
+            "stock_quantity": item.stock_quantity,
+            "description": item.description,
+            "available_sizes": item.available_sizes,
+            "material": item.material,
+            "fit_type": item.fit_type,
+            "gender": item.gender,
+            "sport": item.sport,
+            "league": item.league,
+            "team": item.team,
+            "jersey_number": item.jersey_number,
+            "specs": item.specs,
+            "reviews": item.reviews,
+            "suggested_items": suggestions,
+        }
+    )
 
 
 @app.post("/api/cart/merge", response_model=CartResponse)

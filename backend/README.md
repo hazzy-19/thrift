@@ -1,6 +1,7 @@
-# Thrifter Backend
+# Jersey World Backend
 
-FastAPI API and Telegram announcement manager.
+FastAPI API, PostgreSQL data layer, cart merge service, and Telegram
+announcement manager for Jersey World.
 
 All Telegram announcement code, models, storage, utilities, and detailed
 documentation live in `telegram_bot/`. The general FastAPI entrypoint remains
@@ -17,7 +18,7 @@ TELEGRAM_WEBHOOK_SECRET=
 TELEGRAM_WEBHOOK_URL=
 FRONTEND_ORIGINS=http://localhost:5173
 DATABASE_PATH=
-DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/thrifter
+DATABASE_URL=postgresql+psycopg://postgres:password@localhost:5432/jersey_world
 REDIS_URL=redis://localhost:6379/0
 RATE_LIMIT_REQUESTS=120
 RATE_LIMIT_WINDOW_SECONDS=60
@@ -78,16 +79,27 @@ inline buttons for enabling, disabling, previewing, and deleting records.
 ```text
 GET /health
 GET /api/announcements
+GET /api/items
+GET /api/items/{item_id}
+POST /api/cart/merge
 POST /api/telegram/webhook
 ```
 
 `GET /api/announcements` returns active announcements newest first.
+`GET /api/items` reads products from PostgreSQL and supports optional
+`category` and `query` parameters. `GET /api/items/{item_id}` returns item
+details, reviews, and same-category suggestions.
+`POST /api/cart/merge` merges a Firebase-authenticated customer's local cart
+into PostgreSQL.
 
 Detailed bot documentation is in `telegram_bot/TELEGRAM_BOT_GUIDE.txt`.
 
-## Carts, Redis, and Alembic
+## Items, Carts, Redis, and Alembic
 
-- PostgreSQL stores authenticated customer carts.
+- PostgreSQL stores Jersey World items, item reviews, authenticated carts, and
+  cart items.
+- The storefront does not use mock product data. Empty `items` tables produce
+  empty product states.
 - Browser local storage holds the guest cart before authentication.
 - `POST /api/cart/merge` verifies the Firebase ID token, transactionally merges
   the submitted local cart into PostgreSQL, and returns the database cart.
@@ -100,8 +112,18 @@ After setting `DATABASE_URL`, apply migrations from the backend folder:
 .\.venv\Scripts\python.exe -m alembic upgrade head
 ```
 
+Run migrations before starting FastAPI. Startup validates the configured
+PostgreSQL schema and fails immediately when required tables are missing.
+
 Create future migrations after changing SQLAlchemy models:
 
 ```powershell
 .\.venv\Scripts\python.exe -m alembic revision --autogenerate -m "describe change"
 ```
+
+## Not Done Yet
+
+- No backend admin endpoints exist for creating or editing items.
+- No seed/import command exists for production Jersey World catalog data.
+- Reviews are read-only from the storefront.
+- Wishlist persistence is not implemented in PostgreSQL yet.

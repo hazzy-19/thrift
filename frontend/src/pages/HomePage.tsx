@@ -23,15 +23,15 @@ const promotions: Promotion[] = [
         label: "Match-day edit",
         title: "World Cup",
         accent: "jerseys are here.",
-        description: "Find colorful tees and match-day layers before the next kickoff.",
+        description: "Find match-ready jerseys and performance layers before the next kickoff.",
         image: worldCupImage,
         filter: "men",
     },
     {
         label: "Fresh arrivals",
         title: "New looks.",
-        accent: "One-of-one energy.",
-        description: "Discover standout women's pieces selected from the latest thrift drop.",
+        accent: "Game-ready energy.",
+        description: "Discover standout women's sportswear selected for training days and match days.",
         image: womenImage,
         filter: "women",
     },
@@ -39,15 +39,15 @@ const promotions: Promotion[] = [
         label: "Weekend picks",
         title: "Small sizes.",
         accent: "Big personality.",
-        description: "Easy, colorful finds chosen for kids who never stop moving.",
+        description: "Easy, colorful kits chosen for kids who never stop moving.",
         image: kidsImage,
-        filter: "kid",
+        filter: "kids",
     },
     {
         label: "Clearance sale",
         title: "More style.",
         accent: "Less spend.",
-        description: "The biggest markdowns come first, with the rest of the shop still below.",
+        description: "The biggest Jersey World markdowns come first, with more sportswear below.",
         image: clearanceImage,
         filter: "clearance",
     },
@@ -166,9 +166,9 @@ const HomePage = ({ searchQuery }: HomePageProps) => {
             <section id="shop" className="mx-auto max-w-7xl scroll-mt-28 px-4 py-12 sm:px-6 lg:px-8">
                 <div className="flex flex-wrap items-end justify-between gap-3">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-700">Shop the edit</p>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-rose-700">Shop Jersey World</p>
                         <h2 className="mt-1 text-3xl font-bold text-rose-950">
-                            All finds
+                            All sportswear
                         </h2>
                     </div>
                     {promotionFilter !== "all" && (
@@ -177,7 +177,7 @@ const HomePage = ({ searchQuery }: HomePageProps) => {
                             onClick={() => setPromotionFilter("all")}
                             className="rounded-full border border-rose-200 px-4 py-2 text-sm font-bold text-pine hover:bg-rose-50"
                         >
-                            Reset order
+                            Reset view
                         </button>
                     )}
                 </div>

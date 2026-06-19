@@ -3,7 +3,7 @@ import { useAuth } from "./auth-context";
 import { CartContext } from "./cart-context";
 import { mergeLocalCart, type CartItem } from "../services/cart";
 
-const STORAGE_KEY = "thrifter:guest-cart";
+const STORAGE_KEY = "jersey-world:guest-cart";
 
 const loadGuestCart = (): CartItem[] => {
     try {

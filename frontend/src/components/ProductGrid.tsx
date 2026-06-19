@@ -1,13 +1,6 @@
-import allProducts from "./assets/all_product.js";
-
-type Product = {
-    id: number;
-    name: string;
-    category: string;
-    image: string;
-    new_price: number;
-    old_price: number;
-};
+import { useEffect, useState } from "react";
+import ProductCard from "./ProductCard";
+import { listItems, type ItemSummary } from "../services/items";
 
 type ProductGridProps = {
     category?: string;
@@ -15,55 +8,66 @@ type ProductGridProps = {
     promotionFilter?: PromotionFilter;
 };
 
-export type PromotionFilter = "all" | "women" | "men" | "kid" | "clearance";
-
-const products = allProducts as Product[];
+export type PromotionFilter = "all" | "women" | "men" | "kids" | "clearance";
 
 const ProductGrid = ({ category, query, promotionFilter = "all" }: ProductGridProps) => {
-    const normalizedQuery = query.trim().toLowerCase();
-    const visibleProducts = products
-        .filter(
-            (product) =>
-                (!category || product.category === category) &&
-                (!normalizedQuery ||
-                    product.name.toLowerCase().includes(normalizedQuery) ||
-                    product.category.toLowerCase().includes(normalizedQuery)),
-        )
-        .map((product, originalIndex) => ({ product, originalIndex }))
-        .sort((a, b) => {
-            if (promotionFilter === "clearance") {
-                const discountA = (a.product.old_price - a.product.new_price) / a.product.old_price;
-                const discountB = (b.product.old_price - b.product.new_price) / b.product.old_price;
-                return discountB - discountA || a.originalIndex - b.originalIndex;
-            }
+    const [products, setProducts] = useState<ItemSummary[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const effectiveCategory = category ?? (promotionFilter !== "all" && promotionFilter !== "clearance" ? promotionFilter : undefined);
 
-            if (promotionFilter !== "all") {
-                const aMatches = a.product.category === promotionFilter ? 1 : 0;
-                const bMatches = b.product.category === promotionFilter ? 1 : 0;
-                return bMatches - aMatches || a.originalIndex - b.originalIndex;
-            }
+    useEffect(() => {
+        const controller = new AbortController();
+        setLoading(true);
+        setError("");
 
-            return a.originalIndex - b.originalIndex;
-        })
-        .map(({ product }) => product);
+        listItems({ category: effectiveCategory, query, signal: controller.signal })
+            .then((items) => {
+                const sortedItems =
+                    promotionFilter === "clearance"
+                        ? [...items].sort((a, b) => {
+                              const discountA = Number(a.original_price ?? a.price) - Number(a.price);
+                              const discountB = Number(b.original_price ?? b.price) - Number(b.price);
+                              return discountB - discountA;
+                          })
+                        : items;
+                setProducts(sortedItems);
+            })
+            .catch(() => {
+                if (!controller.signal.aborted) {
+                    setError("Unable to load Jersey World items.");
+                }
+            })
+            .finally(() => {
+                if (!controller.signal.aborted) {
+                    setLoading(false);
+                }
+            });
 
-    if (visibleProducts.length === 0) {
+        return () => controller.abort();
+    }, [effectiveCategory, promotionFilter, query]);
+
+    if (loading) {
+        return <p className="mt-8 rounded-lg bg-rose-50 p-6 text-center font-semibold text-pine">Loading jerseys...</p>;
+    }
+
+    if (error) {
+        return <p className="mt-8 rounded-lg bg-rose-50 p-6 text-center font-semibold text-pine">{error}</p>;
+    }
+
+    if (products.length === 0) {
         return (
-            <p className="mt-8 rounded-xl bg-rose-50 p-6 text-center font-semibold text-pine">
-                No products found on this page.
+            <p className="mt-8 rounded-lg bg-rose-50 p-6 text-center font-semibold text-pine">
+                No Jersey World items found on this page.
             </p>
         );
     }
 
     return (
         <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {visibleProducts.map((product) => (
-                <li className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-rose-100" key={product.id}>
-                    <img className="aspect-[3/4] w-full object-cover" src={product.image} alt={product.name} />
-                    <div className="p-3">
-                        <h2 className="line-clamp-2 text-sm font-semibold text-pine">{product.name}</h2>
-                        <p className="mt-2 font-bold text-rose-900">${product.new_price.toFixed(2)}</p>
-                    </div>
+            {products.map((product) => (
+                <li key={product.id}>
+                    <ProductCard item={product} />
                 </li>
             ))}
         </ul>

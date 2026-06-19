@@ -1,1 +1,1 @@
-"""Thrifter backend application."""
+"""Jersey World backend application."""

@@ -188,12 +188,12 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
                 <div className="mx-auto hidden max-w-7xl items-center gap-6 px-6 py-3 md:flex lg:px-8">
                 <Link
                     to="/"
-                    aria-label="Thrifter home"
+                    aria-label="Jersey World home"
                     className={`flex shrink-0 items-center gap-2 rounded-md ${focusClasses}`}
                 >
                     <img src={logo} alt="" className="h-10 w-10 object-contain" />
                     <span className="hidden font-display text-xl font-bold uppercase tracking-wider text-pine lg:inline">
-                        Thrifter
+                        Jersey World
                     </span>
                 </Link>
 
@@ -306,13 +306,13 @@ const Navbar = ({ cartCount, onSearchChange, searchQuery, user }: NavbarProps) =
 
                     <Link
                         to="/"
-                        aria-label="Thrifter home"
+                        aria-label="Jersey World home"
                         onClick={closeMobilePanels}
                         className={`flex items-center gap-1.5 rounded-md ${focusClasses}`}
                     >
                         <img src={logo} alt="" className="h-8 w-8 object-contain" />
                         <span className="font-display text-base font-bold uppercase tracking-wider text-pine min-[375px]:inline">
-                            Thrifter
+                            Jersey World
                         </span>
                     </Link>
 
